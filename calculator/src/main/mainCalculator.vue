@@ -1,6 +1,6 @@
 <template>
     <div class="calculator">
-        <appDisplay value="100"/>
+        <appDisplay :value="displayValue"/>
         <appButton label="AC" triple @onCalcButtonClick="clearMemory"/>
         <appButton label="/" operation @onCalcButtonClick="setOperation"/>
         <appButton label="7" @onCalcButtonClick="addDigit"/>
@@ -24,18 +24,74 @@
 <script>
 import appDisplay from '@/components/compDisplay.vue';
 import appButton from '@/components/compButton.vue';
+import 'core-js/features/number/parse-float';
 
 export default{
+    data: function(){
+        return{
+            displayValue: "0",
+            clearDisplay: false,
+            operation: null,
+            values: [0,0],
+            current: 0,
+        }
+    },
     components: {appButton, appDisplay},
     methods:{
         clearMemory(){
-            
+                         //variables        initial variable state
+            Object.assign(this.$data, this.$options.data());
         },
         setOperation(operation){
-            
+            if(this.current === 0){
+                this.operation = operation;
+                this.current = 1;
+                this.clearDisplay = true;
+            }
+            else{
+                const equals = operation === "=";
+                const currentOperation = this.operation;
+
+                try{
+                    this.values[0] = eval(
+                        `${this.values[0]} ${currentOperation} ${this.values[1]}`
+                    )
+                    if (isNaN(this.values[0]) || !isFinite(this.values[0])) {
+                        this.clearMemory()
+                    return
+                    }
+                    this.values[0] = Number(this.values[0].toFixed(4));
+                }
+                catch (e){
+                    this.$emit('onError', e);
+                }
+
+                this.values[1] = 0;
+                this.displayValue = this.values[0];
+                this.operation = equals ? null : operation;
+                this.current = equals ? 0 : 1;
+                this.clearDisplay = !equals;
+            }
         },
         addDigit(n){
+            if((n === ".") && this.displayValue.includes(".")){
+                return;
+            }
 
+            const clearDisplay = this.displayValue === "0"
+                || this.clearDisplay;
+            const currentValue = clearDisplay ? "" : this.displayValue;
+            const displayValue = currentValue + n;
+
+            this.displayValue = displayValue;
+            this.clearDisplay = false;
+            this.values[this.current] = displayValue;
+
+            // if(n !== "."){
+            //     const i = this.current;
+            //     const newValue = parseFloat(displayValue);
+            //     this.values[i] = newValue;
+            // }
         }
     }
 }
